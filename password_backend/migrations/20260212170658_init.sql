@@ -1,7 +1,8 @@
 -- Add migration script here
 CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    salt BLOB NOT NULL
+    salt BLOB NOT NULL,
+    auth_checksum BLOB NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS secrets (
