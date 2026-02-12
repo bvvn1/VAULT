@@ -6,6 +6,6 @@ pub mod api;
 async fn main() {
     //let pool = SqlitePool::connect("sqlite:vault.db").await.unwrap();
 
-    dbg!(crypto::encrypt_password("sex"));
+    dbg!(crypto::encrypt_password("bateznaemse"));
 
 }
