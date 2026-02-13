@@ -9,3 +9,5 @@ argon2 = "0.5.3"
 sqlx = {workspace = true}
 tokio = {workspace = true}
 gongo = {workspace = true}
+env_logger = {workspace = true}
+log = {workspace = true}
