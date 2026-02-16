@@ -1,9 +1,7 @@
-use crate::crypto;
-use log::error;
 use serde::{Deserialize, Serialize};
 use url::Host;
 use uuid::Uuid;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::Zeroizing;
 
 const MAGIC_BYTES: &'static [u8; 4] = b"RVLT";
 
@@ -12,11 +10,11 @@ struct Entry {
     id: [u8; 16],
     service: Host,
     username: String,
-    password: String,
+    password: Zeroizing<String>,
 }
 
 impl Entry {
-    fn new(service: Host, username: String, password: String) -> Self {
+    fn new(service: Host, username: String, password: Zeroizing<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_bytes_le(),
             service,
@@ -26,6 +24,7 @@ impl Entry {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 struct Vault {
     magic_bytes: [u8; 4],
     salt: [u8; 16],
@@ -33,5 +32,7 @@ struct Vault {
     entries: Vec<Entry>,
 }
 
-impl Vault {}
+impl Vault {
+    fn new(password: Zeroizing<String>) {}
+}
 //finish

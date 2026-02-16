@@ -1,5 +1,10 @@
 use env_logger::Env;
-use gongo::{self, crypto};
+use gongo::{
+    self,
+    crypto::{self, decrypt_with_password},
+    vaultfile,
+};
+
 use sqlx::SqlitePool;
 pub mod api;
 
@@ -8,8 +13,8 @@ async fn main() {
     //let pool = SqlitePool::connect("sqlite:vault.db").await.unwrap();
     #[cfg(debug_assertions)]
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    dbg!(crypto::encrypt_password("bateznaemse"));
-
-    let gog = crypto::derive_key_with_salt("bateznaemse", "pjoCwb7kw1lLjxQnyfRBqA");
-    dbg!(gog);
+    let mut nig = String::from("sdadsadadadsda");
+    let sex = crypto::encrypt_with_password(&mut nig);
+    dbg!(&sex);
+    let blehh = decrypt_with_password(&mut nig, sex);
 }

@@ -1,4 +1,5 @@
 pub mod crypto;
+mod error;
 pub mod vaultfile;
 
 pub fn add(left: u64, right: u64) -> u64 {
