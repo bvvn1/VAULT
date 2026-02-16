@@ -3,3 +3,4 @@
 /password_backend/vault.db
 /password_backend/vault.db-shm
 /password_backend/vault.db-wal
+.env

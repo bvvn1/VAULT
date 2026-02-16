@@ -16,3 +16,4 @@ postcard = {workspace = true}
 zeroize = {workspace = true}
 url = {workspace = true}
 uuid = {workspace = true}
+exn = {workspace = true}

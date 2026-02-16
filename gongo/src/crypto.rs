@@ -1,15 +1,14 @@
 use aes_gcm::{
     AeadCore, Aes256Gcm, KeyInit,
     aead::{Aead, OsRng, generic_array::GenericArray},
-    aes::cipher::InvalidLength,
 };
-use argon2::{
-    Argon2, Params, PasswordHasher,
-    password_hash::{Salt, SaltString},
-};
+use argon2::{Argon2, Params, PasswordHasher, password_hash::SaltString};
 use log::{error, info};
 use sqlx::SqlitePool;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+
+use crate::error::CryptographyError;
+use exn::{self, OptionExt, Result, ResultExt};
 
 #[derive(Debug, ZeroizeOnDrop)]
 pub struct PasswordTopki {
@@ -28,14 +27,15 @@ async fn is_initalized(pool: &SqlitePool) -> bool {
 }
 
 //spawn second thread
-fn derive_key(password: &mut str) -> (Vec<u8>, String) {
+fn derive_key(password: &Zeroizing<String>) -> (Vec<u8>, String) {
+    //
     let parameters = Params::new(
         Params::DEFAULT_M_COST,
         Params::DEFAULT_T_COST,
         Params::DEFAULT_P_COST,
         Some(32usize),
     )
-    .unwrap();
+    .unwrap(); //narpavi static
     let argon2 = Argon2::new(
         argon2::Algorithm::Argon2id,
         argon2::Version::V0x13,
@@ -56,39 +56,45 @@ fn derive_key(password: &mut str) -> (Vec<u8>, String) {
     });
 }
 
-pub fn derive_key_with_salt(password: &mut String, salt: &str) -> Vec<u8> {
+pub fn derive_key_with_salt(
+    password: &Zeroizing<String>,
+    salt: &str,
+) -> Result<Vec<u8>, CryptographyError> {
     let parameters = Params::new(
         Params::DEFAULT_M_COST,
         Params::DEFAULT_T_COST,
         Params::DEFAULT_P_COST,
         Some(32usize),
     )
-    .unwrap();
+    .unwrap(); //make static
     let argon2 = Argon2::new(
         argon2::Algorithm::Argon2id,
         argon2::Version::V0x13,
         parameters,
     );
 
-    let saltb64 = SaltString::encode_b64(salt.as_bytes()).unwrap();
+    let saltb64 = SaltString::encode_b64(salt.as_bytes())
+        .or_raise(|| CryptographyError::Base64EncodingError)?;
 
     return tokio::task::block_in_place(move || {
-        let password_hash = argon2.hash_password(password.as_bytes(), &saltb64).unwrap();
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &saltb64)
+            .or_raise(|| CryptographyError::KeyDeriveError)?;
+
         info!("passwordhashed successfully");
         //let salt_as_string = salt.to_string();
         let raw_key = password_hash
             .hash
-            .expect("failed access hash")
+            .ok_or_raise(|| CryptographyError::HashingError)?
             .as_bytes()
             .to_vec();
 
-        password.zeroize();
-        return raw_key;
+        return Ok(raw_key);
     });
 }
 
-pub fn encrypt_with_password(password: &mut String) -> PasswordTopki {
-    let derived_key_tuple = derive_key(password.as_mut_str());
+pub fn encrypt_with_password(password: &Zeroizing<String>) -> PasswordTopki {
+    let derived_key_tuple = derive_key(password);
 
     let key = derived_key_tuple.0.as_slice();
     let salt_as_string = derived_key_tuple.1;
@@ -102,7 +108,6 @@ pub fn encrypt_with_password(password: &mut String) -> PasswordTopki {
         .unwrap()
         .into_boxed_slice(); // EVENTUALNO handle error
 
-    password.zeroize();
     PasswordTopki {
         salt: salt_as_string,
         nonce: nonce.to_vec().into_boxed_slice(),
@@ -111,23 +116,22 @@ pub fn encrypt_with_password(password: &mut String) -> PasswordTopki {
 }
 
 pub fn decrypt_with_password(
-    password: &mut String,
+    password: &Zeroizing<String>,
     password_struct: PasswordTopki,
-) -> Result<Vec<u8>, InvalidLength> {
-    let key = derive_key_with_salt(password, &password_struct.salt);
-    let mut cipher = Aes256Gcm::new_from_slice(&key);
-    let cipher = match cipher {
-        Ok(x) => x,
-        Err(err) => {
-            error!("failed to create cipher: {}", err);
-            return Err(err);
-        }
-    };
+) -> Result<Vec<u8>, CryptographyError> {
+    let key = derive_key_with_salt(password, &password_struct.salt)
+        .or_raise(|| CryptographyError::KeyDeriveError)?;
+    log::debug!("{:?}", key);
+
+    let cipher = Aes256Gcm::new_from_slice(&key).or_raise(|| CryptographyError::InvalidLenght)?;
+
     let nonce = GenericArray::from_slice(&password_struct.nonce);
 
     let ciphertext = password_struct.ciphertext.as_ref();
 
-    let decrypted = cipher.decrypt(nonce, ciphertext);
+    let decrypted = cipher
+        .decrypt(nonce, ciphertext)
+        .or_raise(|| CryptographyError::DecryptError)?; // ima errori po descripciqta
 
     return Ok(decrypted);
-} // napravi funkciqta da vrushta result i napravi custom error type po kusno
+}

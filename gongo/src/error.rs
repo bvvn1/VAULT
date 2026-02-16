@@ -1,4 +1,17 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum EcryptError {}
+pub enum CryptographyError {
+    #[error("Invalid key lenght")]
+    InvalidLenght,
+    #[error("Error during decryption")]
+    DecryptError,
+    #[error("Error during encryption")]
+    EncryptError,
+    #[error("Error during key deriving")]
+    KeyDeriveError,
+    #[error("Error during hashing")]
+    HashingError,
+    #[error("Error during Base 64 encodig")]
+    Base64EncodingError,
+}

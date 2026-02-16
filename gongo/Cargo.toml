@@ -16,3 +16,4 @@ postcard = {workspace = true}
 zeroize = {workspace = true}
 url = {workspace = true}
 thiserror = {workspace = true}
+exn = {workspace = true}
