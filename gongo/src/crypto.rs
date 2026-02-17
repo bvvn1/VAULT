@@ -73,8 +73,7 @@ pub fn derive_key_with_salt(
         parameters,
     );
 
-    let saltb64 = SaltString::encode_b64(salt.as_bytes())
-        .or_raise(|| CryptographyError::Base64EncodingError)?;
+    let saltb64 = SaltString::from_b64(salt).or_raise(|| CryptographyError::Base64EncodingError)?;
 
     return tokio::task::block_in_place(move || {
         let password_hash = argon2
@@ -121,7 +120,6 @@ pub fn decrypt_with_password(
 ) -> Result<Vec<u8>, CryptographyError> {
     let key = derive_key_with_salt(password, &password_struct.salt)
         .or_raise(|| CryptographyError::KeyDeriveError)?;
-    log::debug!("{:?}", key);
 
     let cipher = Aes256Gcm::new_from_slice(&key).or_raise(|| CryptographyError::InvalidLenght)?;
 

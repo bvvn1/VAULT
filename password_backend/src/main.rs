@@ -14,8 +14,7 @@ async fn main() {
     //let pool = SqlitePool::connect("sqlite:vault.db").await.unwrap();
     #[cfg(debug_assertions)]
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
-    let mut nig = String::from("sdadsadadadsda");
-    let gogo = Zeroizing::new(nig);
+    let gogo = Zeroizing::new("sdadsadadadsda".into());
     let sex = crypto::encrypt_with_password(&gogo);
 
     dbg!(&sex);
