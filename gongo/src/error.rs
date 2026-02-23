@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::error;
+
 #[derive(Debug, Error)]
 pub enum CryptographyError {
     #[error("Invalid key lenght")]

@@ -9,7 +9,7 @@ resolver = "2"
 [workspace.dependencies]
 aes-gcm = { version = "0.10.3", features = ["std"] }
 argon2 = {version = "0.5.3", features = ["std"]}
-sqlx = { version = "0.8.6", features = ["sqlite"]}
+sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio"]}
 tokio = { version = "1.49.0", features = ["full"] }
 env_logger = "0.11.9"
 log = "0.4.28"
