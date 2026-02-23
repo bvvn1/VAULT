@@ -1,6 +1,7 @@
 /target
 
-/password_backend/vault.db
-/password_backend/vault.db-shm
-/password_backend/vault.db-wal
+*.db
+vault.db-shm
+vault.db-wal
+dump
 .env
