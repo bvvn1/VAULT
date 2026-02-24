@@ -3,8 +3,6 @@ use url::Host;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-use crate::crypto::encrypt_with_password;
-
 // const MAGIC_BYTES: &'static [u8; 4] = b"RVLT";
 
 // #[derive(Serialize, Deserialize, Debug)] //naprai zeroizeondrop
