@@ -21,3 +21,4 @@ zeroize = {version = "1.8.2", features = ["zeroize_derive", "serde"]}
 url = {version = "2.5.8", features = ["serde"]}
 thiserror = "2.0.18"
 exn = "0.3.0"
+bip39 = "2.2.2"

@@ -16,4 +16,6 @@ pub enum CryptographyError {
     HashingError,
     #[error("Error during Base 64 encodig")]
     Base64EncodingError,
+    #[error("Error during the generation of the mnemonic phrase")]
+    MnemonicGenerationError,
 }

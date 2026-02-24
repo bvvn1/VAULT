@@ -1,14 +1,14 @@
+use crate::error::CryptographyError;
 use aes_gcm::{
-    AeadCore, Aes256Gcm, KeyInit,
-    aead::{Aead, OsRng, generic_array::GenericArray},
+    AeadCore, Aes256Gcm, AesGcm, KeyInit,
+    aead::{Aead, OsRng, generic_array::GenericArray, rand_core::RngCore},
 };
 use argon2::{Argon2, Params, PasswordHasher, password_hash::SaltString};
+use bip39::{Language, Mnemonic};
+use exn::{self, OptionExt, Result, ResultExt};
 use log::{error, info};
 use sqlx::SqlitePool;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
-
-use crate::error::CryptographyError;
-use exn::{self, OptionExt, Result, ResultExt};
 
 #[derive(Debug, ZeroizeOnDrop)]
 pub struct PasswordTopki {
@@ -28,7 +28,6 @@ async fn is_initalized(pool: &SqlitePool) -> bool {
 
 //spawn second thread
 fn derive_key(password: &Zeroizing<String>) -> (Vec<u8>, String) {
-    //
     let parameters = Params::new(
         Params::DEFAULT_M_COST,
         Params::DEFAULT_T_COST,
@@ -92,6 +91,23 @@ pub fn derive_key_with_salt(
     });
 }
 
+fn generate_dek(rng: &mut OsRng) -> Zeroizing<[u8; 32]> {
+    let mut dek = [0u8; 32];
+    rng.fill_bytes(&mut dek);
+    info!("dek generated");
+    Zeroizing::new(dek)
+}
+
+fn generate_recovery_phrase(rng: &mut OsRng) -> Result<Zeroizing<String>, CryptographyError> {
+    let mut buf = [0u8; 4];
+    rng.fill_bytes(&mut buf);
+    let mnemonic =
+        Mnemonic::from_entropy(&buf).or_raise(|| CryptographyError::MnemonicGenerationError)?;
+    buf.zeroize();
+    info!("recovery phrase generated");
+    Ok(Zeroizing::new(mnemonic.to_string()))
+}
+
 pub fn encrypt_with_password(password: &Zeroizing<String>) -> PasswordTopki {
     let derived_key_tuple = derive_key(password);
 
@@ -132,4 +148,41 @@ pub fn decrypt_with_password(
         .or_raise(|| CryptographyError::DecryptError)?; // ima errori po descripciqta
 
     return Ok(decrypted);
+}
+
+fn encrypt_dek_with_pswd(
+    password: &Zeroizing<String>,
+    dek: &Zeroizing<String>,
+) -> Result<PasswordTopki, CryptographyError> {
+    let key_tuple = derive_key(password);
+
+    let cipher = Aes256Gcm::new_from_slice(key_tuple.0.as_slice())
+        .or_raise(|| CryptographyError::InvalidLenght)?;
+
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+
+    let ciphertext = cipher
+        .encrypt(&nonce, password.as_ref())
+        .or_raise(|| CryptographyError::EncryptError)?;
+    Ok(PasswordTopki {
+        salt: key_tuple.1,
+        nonce: nonce.to_vec().into_boxed_slice(),
+        ciphertext: ciphertext.into_boxed_slice(),
+    })
+}
+
+fn decrypt_dek_with_pswd(
+    password: &Zeroizing<String>,
+    password_struct: PasswordTopki,
+) -> Result<Zeroizing<Vec<u8>>, CryptographyError> {
+    let key = derive_key_with_salt(password, &password_struct.salt)?;
+    let cipher = Aes256Gcm::new_from_slice(&key).or_raise(|| CryptographyError::InvalidLenght)?;
+
+    let plaintext = cipher
+        .decrypt(
+            GenericArray::from_slice(&password_struct.nonce),
+            password_struct.ciphertext.as_ref(),
+        )
+        .or_raise(|| CryptographyError::DecryptError)?;
+    Ok(Zeroizing::new(plaintext))
 }
