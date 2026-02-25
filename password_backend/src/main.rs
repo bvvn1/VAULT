@@ -7,6 +7,7 @@ use gongo::{
     self,
     crypto::{
         self,
+        crypto::{decrypt_dek_with_pswd, encrypt_dek_with_pswd},
         generation::{self, generate_recovery_phrase},
     },
     vaultfile,
@@ -18,15 +19,7 @@ pub mod api;
 
 #[tokio::main]
 async fn main() {
-    //let pool = SqlitePool::connect("sqlite:vault.db").await.unwrap();
+    let pool = SqlitePool::connect("sqlite:vault.db").await.unwrap();
     #[cfg(debug_assertions)]
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
-
-    let dek = generation::generate_dek(&mut OsRng);
-    dbg!(&dek);
-    let recovery_phrase = generate_recovery_phrase(&mut OsRng).unwrap();
-    dbg!(&recovery_phrase);
-
-    let dek_ciphertext =
-        crypto::crypto::encrypt_dek_with_pswd(&Zeroizing::new("huicho".to_string()), &dek);
 }

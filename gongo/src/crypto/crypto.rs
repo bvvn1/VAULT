@@ -5,6 +5,7 @@ use crate::{
 use aes_gcm::{
     AeadCore, Aes256Gcm, AesGcm, KeyInit,
     aead::{Aead, OsRng, generic_array::GenericArray, rand_core::RngCore},
+    aes::cipher,
 };
 
 use exn::{self, Result, ResultExt};
@@ -13,7 +14,7 @@ use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 #[derive(Debug, ZeroizeOnDrop)]
 pub struct PasswordTopki {
-    pub salt: String,
+    pub salt: Option<String>,
     pub nonce: Box<[u8]>,
     pub ciphertext: Box<[u8]>,
 }
@@ -39,10 +40,10 @@ pub fn encrypt_dek_with_pswd(
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
     let ciphertext = cipher
-        .encrypt(&nonce, password.as_ref())
+        .encrypt(&nonce, dek.as_slice())
         .or_raise(|| CryptographyError::EncryptError)?;
     Ok(PasswordTopki {
-        salt: key_tuple.1,
+        salt: Some(key_tuple.1),
         nonce: nonce.to_vec().into_boxed_slice(),
         ciphertext: ciphertext.into_boxed_slice(),
     })
@@ -62,4 +63,23 @@ pub fn decrypt_dek_with_pswd(
         )
         .or_raise(|| CryptographyError::DecryptError)?;
     Ok(Zeroizing::new(plaintext))
+}
+
+pub fn encrypt_with_dek(
+    password: &Zeroizing<String>,
+    dek: &Zeroizing<[u8; 32]>,
+) -> Result<PasswordTopki, CryptographyError> {
+    let cipher =
+        Aes256Gcm::new_from_slice(dek.as_slice()).or_raise(|| CryptographyError::EncryptError)?;
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+
+    let ciphertext = cipher
+        .encrypt(&nonce, password.as_ref())
+        .or_raise(|| CryptographyError::EncryptError)?;
+
+    Ok(PasswordTopki {
+        salt: None,
+        nonce: nonce.to_vec().into_boxed_slice(),
+        ciphertext: ciphertext.into_boxed_slice(),
+    })
 }
