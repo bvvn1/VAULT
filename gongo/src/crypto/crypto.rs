@@ -8,7 +8,7 @@ use aes_gcm::{
     aes::cipher,
 };
 
-use exn::{self, Result, ResultExt};
+use exn::{self, OptionExt, Result, ResultExt};
 
 use zeroize::{ZeroizeOnDrop, Zeroizing};
 
@@ -28,9 +28,9 @@ pub struct PasswordTopki {
 //     count == 0
 // }
 
-pub fn encrypt_dek_with_pswd(
+pub fn encrypt_with_pswd(
     password: &Zeroizing<String>,
-    dek: &Zeroizing<[u8; 32]>,
+    plaintext: Vec<u8>,
 ) -> Result<PasswordTopki, CryptographyError> {
     let key_tuple = derive_key(password);
 
@@ -40,7 +40,7 @@ pub fn encrypt_dek_with_pswd(
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
     let ciphertext = cipher
-        .encrypt(&nonce, dek.as_slice())
+        .encrypt(&nonce, plaintext.as_slice())
         .or_raise(|| CryptographyError::EncryptError)?;
     Ok(PasswordTopki {
         salt: Some(key_tuple.1),
@@ -49,11 +49,17 @@ pub fn encrypt_dek_with_pswd(
     })
 }
 
-pub fn decrypt_dek_with_pswd(
+pub fn decrypt_with_pswd(
     password: &Zeroizing<String>,
     password_struct: PasswordTopki,
 ) -> Result<Zeroizing<Vec<u8>>, CryptographyError> {
-    let key = derive_key_with_salt(password, &password_struct.salt)?;
+    let key = derive_key_with_salt(
+        password,
+        &password_struct
+            .salt
+            .clone()
+            .ok_or_raise(|| CryptographyError::KeyDeriveError)?,
+    )?;
     let cipher = Aes256Gcm::new_from_slice(&key).or_raise(|| CryptographyError::InvalidLenght)?;
 
     let plaintext = cipher

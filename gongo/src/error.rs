@@ -1,7 +1,5 @@
 use thiserror::Error;
 
-use crate::error;
-
 #[derive(Debug, Error)]
 pub enum CryptographyError {
     #[error("Invalid key lenght")]
@@ -18,4 +16,10 @@ pub enum CryptographyError {
     Base64EncodingError,
     #[error("Error during the generation of the mnemonic phrase")]
     MnemonicGenerationError,
+}
+
+#[derive(Debug, Error)]
+pub enum VaultError {
+    #[error("Error during vault creation")]
+    VaultCreation,
 }

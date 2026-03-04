@@ -3,15 +3,8 @@ use std::ffi::OsStr;
 use aes_gcm::aead::OsRng;
 use env_logger::Env;
 use exn::ResultExt;
-use gongo::{
-    self,
-    crypto::{
-        self,
-        crypto::{decrypt_dek_with_pswd, encrypt_dek_with_pswd},
-        generation::{self, generate_recovery_phrase},
-    },
-    vaultfile,
-};
+
+use gongo::crypto;
 
 use sqlx::{SqlitePool, query};
 use zeroize::Zeroizing;
